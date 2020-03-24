@@ -1,0 +1,55 @@
+#!/bin/bash
+# nicenumber -- Отображает переданное число в формате представления с запятыми.
+#   Предполагает наличие переменных DD (decimal point delimiter -- разделитель
+#   дробной части) и TD (thousands delimiter -- разделитель групп разрядов).
+#   Создает переменную nicenum с результатом, а при наличии второго аргумента
+#   дополнительно выводит результат в стандартный вывод.
+
+nicenumber()
+{
+  # Обратите внимание: предполагается, что для разделения дробной и целой
+  #   части во входном значении используется точка.
+  #   В выходной строке в качестве такого разделителя используется точка, если
+  #   пользователь не определил другой символ с помощью флага -d.
+  integer=$(echo $1 | cut -d. -f1) # Слева от точки
+  decimal=$(echo $1 | cut -d. -f2) # Справа от точки
+  # Проверить присутствие дробной части в числе.
+  if [ "$decimal" != "$1" ]; then
+    # Дробная часть есть, включить ее в результат.
+    result="${DD:= '.'}$decimal"
+  fi
+thousands=$integer
+while [ $thousands -gt 999 ]; do
+  remainder=$(($thousands % 1000)) # Три последние значимые цифры
+  # В 'remainder' должно быть три цифры. Требуется добавить ведущие нули?
+  while [ ${#remainder} -lt 3 ] ; do # Добавить ведущие нули
+    remainder="0$remainder"
+  done
+  result="${TD:=","}${remainder}${result}" # Конструировать справа налево
+thousands=$(($thousands / 1000)) # Оставить остаток, если есть
+done
+   nicenum="${thousands}${result}"
+   if [ ! -z $2 ] ; then
+     echo $nicenum
+   fi
+}
+ DD="." # Десятичная точка для разделения целой и дробной части
+ TD="," # Разделитель групп разрядов
+ 
+ # Начало основного сценария
+ # =================
+while getopts "d:t:" opt; do case $opt in
+       d ) DD="$OPTARG" ;;
+       t ) TD="$OPTARG" ;;
+     esac
+   done
+   shift $(($OPTIND - 1))
+   # Проверка ввода
+   if [ $# -eq 0 ] ; then
+     echo "Usage: $(basename $0) [-d c] [-t c] number"
+     echo " -d specifies the decimal point delimiter"
+     echo " -t specifies the thousands delimiter"
+     exit 0
+fi
+nicenumber $1 1 # Второй аргумент заставляет nicenumber вывести результат.
+exit 0
